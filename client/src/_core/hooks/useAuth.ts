@@ -42,12 +42,25 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
+    const userData = meQuery.data;
+    
+    // Determine subscription status
+    // For super_admin, always active
+    // For others, check if company has active subscription
+    const subscriptionActive = userData?.role === "super_admin" ? true : false;
+
+    const userWithSubscription = userData ? {
+      ...userData,
+      subscriptionActive,
+    } : null;
+
     localStorage.setItem(
       "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
+      JSON.stringify(userWithSubscription)
     );
+
     return {
-      user: meQuery.data ?? null,
+      user: userWithSubscription,
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
