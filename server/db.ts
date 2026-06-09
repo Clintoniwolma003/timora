@@ -1,4 +1,4 @@
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
@@ -394,7 +394,7 @@ export async function createAttendance(attendance: InsertAttendance) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return db.insert(attendance).values(attendance);
+  return db.insert(attendance).values(attendance).onDuplicateKeyUpdate({ set: attendance });
 }
 
 export async function getAttendanceById(attendanceId: number, companyId: number) {
@@ -421,6 +421,7 @@ export async function getAttendanceByUserAndDate(userId: number, companyId: numb
   const result = await db.select().from(attendance).where(and(
     eq(attendance.userId, userId),
     eq(attendance.companyId, companyId),
+    and(gte(attendance.clockInTime, startOfDay), lte(attendance.clockInTime, endOfDay))
   )).limit(1);
 
   return result.length > 0 ? result[0] : undefined;

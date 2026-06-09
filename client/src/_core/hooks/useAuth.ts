@@ -47,7 +47,7 @@ export function useAuth(options?: UseAuthOptions) {
     // Determine subscription status
     // For super_admin, always active
     // For others, check if company has active subscription
-    const subscriptionActive = userData?.role === "super_admin" ? true : false;
+    const subscriptionActive = userData?.role === "super_admin" || userData?.company?.subscriptionStatus === "active";
 
     const userWithSubscription = userData ? {
       ...userData,

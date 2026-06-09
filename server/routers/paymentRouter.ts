@@ -8,8 +8,10 @@ import axios from "axios";
 // PAYSTACK CONFIGURATION
 // ============================================================================
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY;
+import { ENV } from "../_core/env";
+
+const PAYSTACK_SECRET_KEY = ENV.paystackSecretKey;
+const PAYSTACK_PUBLIC_KEY = ENV.paystackPublicKey;
 const PAYSTACK_API_URL = "https://api.paystack.co";
 
 if (!PAYSTACK_SECRET_KEY) {
@@ -21,7 +23,7 @@ if (!PAYSTACK_SECRET_KEY) {
 // ============================================================================
 
 const initiatePaymentSchema = z.object({
-  planType: z.enum(["starter", "professional", "enterprise"]),
+  plan: z.enum(["starter", "professional", "enterprise"]),
   email: z.string().email(),
   amount: z.number().min(100), // Amount in cents
 });
@@ -82,7 +84,7 @@ export const paymentRouter = router({
       }
 
       try {
-        const plan = PAYMENT_PLANS[input.planType];
+        const plan = PAYMENT_PLANS[input.plan];
         if (!plan) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -102,7 +104,7 @@ export const paymentRouter = router({
               planType: input.planType,
               planName: plan.name,
             },
-            plan: input.planType, // Create/use Paystack plan
+            plan: input.plan, // Create/use Paystack plan
           },
           {
             headers: {
@@ -193,8 +195,8 @@ export const paymentRouter = router({
         }
 
         // Get plan details
-        const planType = paymentData.metadata.planType;
-        const plan = PAYMENT_PLANS[planType as keyof typeof PAYMENT_PLANS];
+        const plan = paymentData.metadata.plan;
+        const planDetails = PAYMENT_PLANS[plan as keyof typeof PAYMENT_PLANS];
 
         if (!plan) {
           throw new TRPCError({
@@ -225,9 +227,9 @@ export const paymentRouter = router({
             existingSubscription.id,
             ctx.user.companyId,
             {
-              planType,
+              plan: plan as any,
               status: "active",
-              paystackReference: input.reference,
+              paystackAuthorizationCode: input.reference,
               startDate: now,
               endDate,
               renewalDate: endDate,
@@ -238,9 +240,9 @@ export const paymentRouter = router({
           // Create new subscription
           await db.createSubscription({
             companyId: ctx.user.companyId,
-            planType,
+            plan: plan as any,
             status: "active",
-            paystackReference: input.reference,
+            paystackAuthorizationCode: input.reference,
             startDate: now,
             endDate,
             renewalDate: endDate,
@@ -251,7 +253,7 @@ export const paymentRouter = router({
         // Update company subscription status
         await db.updateCompany(ctx.user.companyId, {
           subscriptionStatus: "active",
-          subscriptionPlan: planType,
+          plan: plan as any,
         });
 
         return {
@@ -259,8 +261,8 @@ export const paymentRouter = router({
           message: "Payment verified and subscription activated",
           data: {
             reference: input.reference,
-            planType,
-            planName: plan.name,
+            plan: plan as any,
+            planName: planDetails.name,
             endDate,
           },
         };
@@ -306,13 +308,13 @@ export const paymentRouter = router({
         id: company?.id,
         name: company?.name,
         subscriptionStatus: company?.subscriptionStatus,
-        subscriptionPlan: company?.subscriptionPlan,
+        plan: company?.plan,
         trialEndsAt: company?.trialEndsAt,
       },
       subscription: subscription
         ? {
             id: subscription.id,
-            planType: subscription.planType,
+            plan: subscription.plan,
             status: subscription.status,
             amount: subscription.amount,
             startDate: subscription.startDate,
