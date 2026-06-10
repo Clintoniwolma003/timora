@@ -37,20 +37,22 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const trpcClient = trpc.createClient({
-  links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        });
-      },
-    }),
-  ],
-});
+const trpcClient = import.meta.env.VITE_MOCK_API === 'true'
+  ? (trpc as any)
+  : trpc.createClient({
+      links: [
+        httpBatchLink({
+          url: "/api/trpc",
+          transformer: superjson,
+          fetch(input, init) {
+            return globalThis.fetch(input, {
+              ...(init ?? {}),
+              credentials: "include",
+            });
+          },
+        }),
+      ],
+    });
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>

@@ -13,7 +13,7 @@ import Unauthorized from "./pages/Unauthorized";
 
 function Router() {
   return (
-    <Switch>
+    <Switch base={import.meta.env.BASE_URL}>
       {/* Public Routes */}
       <Route path={"/"} component={Home} />
       <Route path={"/unauthorized"} component={Unauthorized} />
